@@ -1,7 +1,7 @@
 # 🎬 Movie Search App
 
 A fully responsive **Movie Search Application** built with **HTML, CSS, and JavaScript**, powered by the **OMDb API**.  
-The website allows users to search for movies, view detailed information  and even watch YouTube trailers.
+The website allows users to search for movies, view detailed information, where to watch and even watch YouTube trailers.
 
 ---
 
