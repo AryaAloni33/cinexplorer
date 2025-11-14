@@ -17,7 +17,6 @@
             font-family: Arial;
             padding: 30px;
             text-align: center;
-            transition: 0.3s;
         }
 
         @keyframes netflixBG {
@@ -66,6 +65,7 @@
         .movie:hover {
             background: #ffffff44;
         }
+
         .movie img {
             width: 100%;
             border-radius: 12px;
@@ -115,12 +115,11 @@
             font-size: 17px;
         }
 
-        /* DOOM SCROLL */
+        /* RECOMMENDED (DOOM SCROLL) */
         #recommendedMoviesWrapper {
-            position: relative;
             overflow: hidden;
             width: 100%;
-            padding-top: 20px;
+            margin-top: 30px;
         }
 
         #recommendedMovies {
@@ -143,10 +142,6 @@
             text-align: center;
             cursor: pointer;
             backdrop-filter: blur(4px);
-        }
-        .recMovie img {
-            width: 100%;
-            border-radius: 8px;
         }
 
         @keyframes scrollMovies {
@@ -189,12 +184,10 @@
     <button id="genreBtn">Filter</button>
 </div>
 
-<!-- DOOM SCROLL -->
-<div id="recommend">
-    <h2>🔥 Recommended Movies</h2>
-    <div id="recommendedMoviesWrapper">
-        <div id="recommendedMovies"></div>
-    </div>
+<!-- RECOMMENDED -->
+<h2 style="margin-top:40px;">🔥 Recommended Movies</h2>
+<div id="recommendedMoviesWrapper">
+    <div id="recommendedMovies"></div>
 </div>
 
 <!-- MOVIE RESULTS -->
@@ -210,32 +203,36 @@
 
 <script>
 /* ============================
-   API KEY + GLOBAL VARS
+   API KEYS
 ============================ */
-const API_KEY = "2f01ef65"; // ⭐ YOUR API KEY
+const API_KEY = "2f01ef65"; // OMDb
+const TMDB_KEY = "5e6e637d3c50c76e787a423b632f4ac9"; // TMDB
+
 let currentPage = 1;
 let currentSearch = "";
 
-/* YEAR DROPDOWN FILL */
+/* ============================
+   YEAR DROPDOWN
+============================ */
 const yearDropdown = document.getElementById("yearSelect");
 for (let y = 2025; y >= 1980; y--) {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearDropdown.appendChild(opt);
+    yearDropdown.innerHTML += `<option value="${y}">${y}</option>`;
 }
 
 /* ============================
-   DOOM SCROLL RECOMMENDED
+   RECOMMENDED MOVIES LIST
 ============================ */
 const recommendedList = [
     "Inception","Interstellar","Joker","Avengers","Titanic",
     "The Dark Knight","Fight Club","Avatar","Deadpool",
-    "Iron Man","Spider-Man","John Wick","Dune","Matrix",
+    "Iron Man","Spider-Man","John Wick","Dune","The Matrix",
     "Gladiator","Oppenheimer","Barbie","Black Panther",
     "Shutter Island","Logan"
 ];
 
+/* ============================
+   LOAD RECOMMENDED (FIXED)
+============================ */
 function loadRecommended() {
     const recDiv = document.getElementById("recommendedMovies");
     const fullList = [...recommendedList, ...recommendedList];
@@ -244,23 +241,30 @@ function loadRecommended() {
         fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&t=${movie}`)
             .then(res => res.json())
             .then(data => {
+                if (!data || data.Response === "False") return;
+
+                const poster = (data.Poster && data.Poster !== "N/A")
+                    ? data.Poster
+                    : "https://via.placeholder.com/200x300?text=No+Image";
+
                 recDiv.innerHTML += `
-                    <div class="recMovie" onclick="getDetails('${data.imdbID}', '${data.Title}')">
-                        <img src="${data.Poster}">
+                    <div class="recMovie" onclick="getDetails('${data.imdbID}','${data.Title}')">
+                        <img src="${poster}">
                         <p>${data.Title}</p>
                     </div>
                 `;
             });
     });
 }
+
 loadRecommended();
 
 /* ============================
-        SEARCH
+   SEARCH MOVIES
 ============================ */
 document.getElementById("btn").onclick = () => {
     let query = document.getElementById("searchBox").value.trim();
-    if (!query) return alert("Please enter a movie name");
+    if (!query) return alert("Enter a movie name");
 
     currentSearch = query;
     currentPage = 1;
@@ -274,13 +278,13 @@ function fetchMovies(query, page, clear) {
         .then(data => {
             if (clear) document.getElementById("movies").innerHTML = "";
             if (data.Response === "False") {
-                document.getElementById("movies").innerHTML = "<h2>No results found</h2>";
+                document.getElementById("movies").innerHTML = "<h2>No results</h2>";
                 return;
             }
 
             data.Search.forEach(movie => {
                 document.getElementById("movies").innerHTML += `
-                    <div class="movie" onclick="getDetails('${movie.imdbID}', '${movie.Title}')">
+                    <div class="movie" onclick="getDetails('${movie.imdbID}','${movie.Title}')">
                         <img src="${movie.Poster}">
                         <div class="movie-title">${movie.Title}</div>
                         <div>${movie.Year}</div>
@@ -291,77 +295,61 @@ function fetchMovies(query, page, clear) {
 }
 
 /* ============================
-     INFINITE SCROLL
+   STREAMING INFO (TMDB)
 ============================ */
-window.onscroll = () => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-        if (currentSearch) {
-            currentPage++;
-            fetchMovies(currentSearch, currentPage, false);
-        }
+async function getStreamingPlatforms(title) {
+    try {
+        const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`;
+        const searchRes = await fetch(searchUrl);
+        const searchData = await searchRes.json();
+
+        if (!searchData.results?.length) return "Not available";
+
+        const movieId = searchData.results[0].id;
+
+        const providerUrl = `https://api.themoviedb.org/3/movie/${movieId}/watch/providers?api_key=${TMDB_KEY}`;
+        const providerRes = await fetch(providerUrl);
+        const providerData = await providerRes.json();
+
+        const india = providerData.results.IN;
+        if (!india?.flatrate) return "Not available for streaming in India";
+
+        return india.flatrate.map(p => p.provider_name).join(" • ");
+    } catch (err) {
+        return "Streaming info unavailable";
     }
-};
-
-/* ============================
-     GENRE + YEAR FILTER
-============================ */
-document.getElementById("genreBtn").onclick = () => {
-    let genre = document.getElementById("genreSelect").value;
-    let year = document.getElementById("yearSelect").value;
-
-    if (!genre && !year) return alert("Select a genre or year");
-
-    document.getElementById("movies").innerHTML = "";
-
-    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=movie&type=movie&y=${year}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.Response === "False") {
-                document.getElementById("movies").innerHTML = "<h2>No results found</h2>";
-                return;
-            }
-
-            data.Search.forEach(item => {
-                fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${item.imdbID}`)
-                    .then(res => res.json())
-                    .then(full => {
-                        if (!genre || full.Genre.includes(genre)) {
-                            document.getElementById("movies").innerHTML += `
-                                <div class="movie" onclick="getDetails('${full.imdbID}', '${full.Title}')">
-                                    <img src="${full.Poster}">
-                                    <div class="movie-title">${full.Title}</div>
-                                    <div>${full.Year} • ${full.Genre}</div>
-                                </div>
-                            `;
-                        }
-                    });
-            });
-        });
-};
-
-/* ============================
-    MOVIE POPUP + TRAILER
-============================ */
-function getDetails(id, title) {
-    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${id}&plot=full`)
-        .then(res => res.json())
-        .then(movie => {
-            document.getElementById("popupContent").innerHTML = `
-                <img src="${movie.Poster}">
-                <h2>${movie.Title} (${movie.Year})</h2>
-                <p><b>IMDb:</b> ${movie.imdbRating}</p>
-                <p><b>Genre:</b> ${movie.Genre}</p>
-                <p><b>Actors:</b> ${movie.Actors}</p>
-                <p><b>Plot:</b> ${movie.Plot}</p>
-
-                <button id="trailerBtn" onclick="openTrailer('${title}')">
-                    ▶ Watch Trailer
-                </button>
-            `;
-            document.getElementById("popup").style.display = "flex";
-        });
 }
 
+/* ============================
+   MOVIE DETAILS POPUP
+============================ */
+async function getDetails(id, title) {
+    const movie = await fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${id}&plot=full`)
+        .then(res => res.json());
+
+    const platforms = await getStreamingPlatforms(title);
+
+    document.getElementById("popupContent").innerHTML = `
+        <img src="${movie.Poster}">
+        <h2>${movie.Title} (${movie.Year})</h2>
+        <p><b>IMDb:</b> ${movie.imdbRating}</p>
+        <p><b>Genre:</b> ${movie.Genre}</p>
+        <p><b>Actors:</b> ${movie.Actors}</p>
+        <p><b>Plot:</b> ${movie.Plot}</p>
+
+        <p><b>📺 Where to Watch:</b><br>${platforms}</p>
+
+        <button id="trailerBtn" onclick="openTrailer('${title}')">
+            ▶ Watch Trailer
+        </button>
+    `;
+
+    document.getElementById("popup").style.display = "flex";
+}
+
+/* ============================
+   TRAILER
+============================ */
 function openTrailer(title) {
     window.open(
         `https://www.youtube.com/results?search_query=${encodeURIComponent(title + " official trailer")}`,
