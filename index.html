@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CinExplorer - Movie App</title>
+
+    <style>
+        /* ============================
+           NETFLIX MOVING RED/BLACK BG
+        ============================= */
+        body {
+            background: radial-gradient(circle at 20% 20%, rgba(255,0,0,0.25), transparent 60%),
+                        radial-gradient(circle at 80% 80%, rgba(255,0,0,0.18), transparent 70%),
+                        #0a0a0a;
+            background-size: 200% 200%;
+            animation: netflixBG 14s ease-in-out infinite;
+            color: white;
+            font-family: Arial;
+            padding: 30px;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        @keyframes netflixBG {
+            0%   { background-position: 0% 0%; }
+            50%  { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        /* Inputs + Buttons */
+        #searchBox {
+            width: 300px;
+            padding: 10px;
+            font-size: 17px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        #btn, #genreBtn {
+            padding: 10px 20px;
+            font-size: 17px;
+            background: #ff4444;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        /* MOVIE GRID */
+        #movies {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .movie {
+            background: #ffffff22;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .movie:hover {
+            background: #ffffff44;
+        }
+        .movie img {
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        /* POPUP */
+        #popup {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.77);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #popupBox {
+            width: 60%;
+            background: #222;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        #closeBtn {
+            float: right;
+            font-size: 22px;
+            color: red;
+            cursor: pointer;
+        }
+
+        #popupContent img {
+            width: 200px;
+            float: left;
+            margin-right: 20px;
+            border-radius: 12px;
+        }
+
+        #trailerBtn {
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 17px;
+        }
+
+        /* DOOM SCROLL */
+        #recommendedMoviesWrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            padding-top: 20px;
+        }
+
+        #recommendedMovies {
+            display: flex;
+            gap: 20px;
+            white-space: nowrap;
+            animation: scrollMovies 40s linear infinite;
+        }
+
+        #recommendedMovies:hover {
+            animation-play-state: paused;
+        }
+
+        .recMovie {
+            width: 180px;
+            min-width: 180px;
+            background: #ffffff22;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+        .recMovie img {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        @keyframes scrollMovies {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🎬 CinExplorer</h1>
+
+<!-- SEARCH -->
+<input id="searchBox" type="text" placeholder="Search movies...">
+<button id="btn">Search</button>
+
+<!-- GENRE + YEAR FILTER -->
+<div style="margin-top:20px;">
+    <select id="genreSelect" style="padding:10px; border-radius:6px;">
+        <option value="">Select Genre</option>
+        <option>Action</option>
+        <option>Adventure</option>
+        <option>Animation</option>
+        <option>Comedy</option>
+        <option>Crime</option>
+        <option>Drama</option>
+        <option>Fantasy</option>
+        <option>Horror</option>
+        <option>Mystery</option>
+        <option>Romance</option>
+        <option>Sci-Fi</option>
+        <option>Thriller</option>
+    </select>
+
+    <select id="yearSelect" style="padding:10px; border-radius:6px;">
+        <option value="">Year</option>
+    </select>
+
+    <button id="genreBtn">Filter</button>
+</div>
+
+<!-- DOOM SCROLL -->
+<div id="recommend">
+    <h2>🔥 Recommended Movies</h2>
+    <div id="recommendedMoviesWrapper">
+        <div id="recommendedMovies"></div>
+    </div>
+</div>
+
+<!-- MOVIE RESULTS -->
+<div id="movies"></div>
+
+<!-- POPUP -->
+<div id="popup">
+    <div id="popupBox">
+        <span id="closeBtn">X</span>
+        <div id="popupContent"></div>
+    </div>
+</div>
+
+<script>
+/* ============================
+   API KEY + GLOBAL VARS
+============================ */
+const API_KEY = "2f01ef65"; // ⭐ YOUR API KEY
+let currentPage = 1;
+let currentSearch = "";
+
+/* YEAR DROPDOWN FILL */
+const yearDropdown = document.getElementById("yearSelect");
+for (let y = 2025; y >= 1980; y--) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearDropdown.appendChild(opt);
+}
+
+/* ============================
+   DOOM SCROLL RECOMMENDED
+============================ */
+const recommendedList = [
+    "Inception","Interstellar","Joker","Avengers","Titanic",
+    "The Dark Knight","Fight Club","Avatar","Deadpool",
+    "Iron Man","Spider-Man","John Wick","Dune","Matrix",
+    "Gladiator","Oppenheimer","Barbie","Black Panther",
+    "Shutter Island","Logan"
+];
+
+function loadRecommended() {
+    const recDiv = document.getElementById("recommendedMovies");
+    const fullList = [...recommendedList, ...recommendedList];
+
+    fullList.forEach(movie => {
+        fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&t=${movie}`)
+            .then(res => res.json())
+            .then(data => {
+                recDiv.innerHTML += `
+                    <div class="recMovie" onclick="getDetails('${data.imdbID}', '${data.Title}')">
+                        <img src="${data.Poster}">
+                        <p>${data.Title}</p>
+                    </div>
+                `;
+            });
+    });
+}
+loadRecommended();
+
+/* ============================
+        SEARCH
+============================ */
+document.getElementById("btn").onclick = () => {
+    let query = document.getElementById("searchBox").value.trim();
+    if (!query) return alert("Please enter a movie name");
+
+    currentSearch = query;
+    currentPage = 1;
+
+    fetchMovies(query, currentPage, true);
+};
+
+function fetchMovies(query, page, clear) {
+    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=${query}&page=${page}`)
+        .then(res => res.json())
+        .then(data => {
+            if (clear) document.getElementById("movies").innerHTML = "";
+            if (data.Response === "False") {
+                document.getElementById("movies").innerHTML = "<h2>No results found</h2>";
+                return;
+            }
+
+            data.Search.forEach(movie => {
+                document.getElementById("movies").innerHTML += `
+                    <div class="movie" onclick="getDetails('${movie.imdbID}', '${movie.Title}')">
+                        <img src="${movie.Poster}">
+                        <div class="movie-title">${movie.Title}</div>
+                        <div>${movie.Year}</div>
+                    </div>
+                `;
+            });
+        });
+}
+
+/* ============================
+     INFINITE SCROLL
+============================ */
+window.onscroll = () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+        if (currentSearch) {
+            currentPage++;
+            fetchMovies(currentSearch, currentPage, false);
+        }
+    }
+};
+
+/* ============================
+     GENRE + YEAR FILTER
+============================ */
+document.getElementById("genreBtn").onclick = () => {
+    let genre = document.getElementById("genreSelect").value;
+    let year = document.getElementById("yearSelect").value;
+
+    if (!genre && !year) return alert("Select a genre or year");
+
+    document.getElementById("movies").innerHTML = "";
+
+    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=movie&type=movie&y=${year}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.Response === "False") {
+                document.getElementById("movies").innerHTML = "<h2>No results found</h2>";
+                return;
+            }
+
+            data.Search.forEach(item => {
+                fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${item.imdbID}`)
+                    .then(res => res.json())
+                    .then(full => {
+                        if (!genre || full.Genre.includes(genre)) {
+                            document.getElementById("movies").innerHTML += `
+                                <div class="movie" onclick="getDetails('${full.imdbID}', '${full.Title}')">
+                                    <img src="${full.Poster}">
+                                    <div class="movie-title">${full.Title}</div>
+                                    <div>${full.Year} • ${full.Genre}</div>
+                                </div>
+                            `;
+                        }
+                    });
+            });
+        });
+};
+
+/* ============================
+    MOVIE POPUP + TRAILER
+============================ */
+function getDetails(id, title) {
+    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${id}&plot=full`)
+        .then(res => res.json())
+        .then(movie => {
+            document.getElementById("popupContent").innerHTML = `
+                <img src="${movie.Poster}">
+                <h2>${movie.Title} (${movie.Year})</h2>
+                <p><b>IMDb:</b> ${movie.imdbRating}</p>
+                <p><b>Genre:</b> ${movie.Genre}</p>
+                <p><b>Actors:</b> ${movie.Actors}</p>
+                <p><b>Plot:</b> ${movie.Plot}</p>
+
+                <button id="trailerBtn" onclick="openTrailer('${title}')">
+                    ▶ Watch Trailer
+                </button>
+            `;
+            document.getElementById("popup").style.display = "flex";
+        });
+}
+
+function openTrailer(title) {
+    window.open(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(title + " official trailer")}`,
+        "_blank"
+    );
+}
+
+document.getElementById("closeBtn").onclick = () => {
+    document.getElementById("popup").style.display = "none";
+};
+</script>
+
+</body>
+</html>
