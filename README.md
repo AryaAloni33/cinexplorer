@@ -1,12 +1,12 @@
 # 🎬 Movie Search App
 
 A fully responsive **Movie Search Application** built with **HTML, CSS, and JavaScript**, powered by the **OMDb API**.  
-The app allows users to search for movies, view detailed information, toggle between **Light/Dark mode**, and even watch YouTube trailers.
+The website allows users to search for movies, view detailed information  and even watch YouTube trailers.
 
 ---
 
 ## 🚀 Live Demo  
-🔗 **Demo Link:** (Add your GitHub Pages or Netlify link here)
+🔗 **Demo Link: (https://eclectic-ganache-d6555d.netlify.app/)
 
 ---
 
@@ -24,16 +24,12 @@ The app allows users to search for movies, view detailed information, toggle bet
 - Full plot description  
 
 ### 🎥 Trailer Button
-- Opens YouTube trailer for the selected movie  
-
-### 🌗 Light & Dark Mode
-- One-click theme toggle  
-- Saves eye strain at night  
+- Opens YouTube trailer for the selected movie    
 
 ### 💻 Responsive UI
-- Works on mobile, tablet, and desktop  
+- Works on mobile, tablet and desktop  
 
----
+
 
 ## 🛠️ Tech Stack
 
@@ -47,5 +43,6 @@ The app allows users to search for movies, view detailed information, toggle bet
 ## 📦 Installation & Usage
 
 ### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/AryaAloni33/YOUR-REPO-NAME.git
+
+git clone https://github.com/AryaAloni33/cinexplorer.git
+
